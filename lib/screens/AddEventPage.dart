@@ -17,10 +17,9 @@ class _AddEventPageState extends State<AddEventPage> {
   final _formKey = GlobalKey<FormState>();
   String _title = "";
   DateTime? _selectedDate;
-  TimeOfDay? _selectedTime; // Add a TimeOfDay variable to store the selected time
+  TimeOfDay? _selectedTime;
   LatLng? _selectedLocation;
 
-  // Select date and time together
   void _selectDateAndTime(BuildContext context) async {
     final DateTime? pickedDate = await showDatePicker(
       context: context,

@@ -33,6 +33,16 @@ class EventProvider with ChangeNotifier {
     }
   }
 
+  void removeEvent(ExamEvent event) {
+    int index = _events.indexOf(event);
+    if (index != -1) {
+      _events.removeAt(index);
+      _eventBox.deleteAt(index);
+      bg.BackgroundGeolocation.removeGeofence(event.title);
+      notifyListeners();
+    }
+  }
+
   void addEvent(ExamEvent event) {
     _events.add(event);
     _eventBox.add(event);
@@ -44,7 +54,7 @@ class EventProvider with ChangeNotifier {
   void _registerGeofence(ExamEvent event) {
     bg.BackgroundGeolocation.addGeofence(bg.Geofence(
       identifier: event.title,
-      radius: 1000,
+      radius: 100,
       latitude: event.latitude,
       longitude: event.longitude,
       notifyOnEntry: true,
@@ -94,11 +104,16 @@ Future<void> main() async {
 
   bg.BackgroundGeolocation.onGeofence((bg.GeofenceEvent event) {
     if (event.action == "ENTER") {
+      print("Geofence entered: ${event.identifier}");
       String? title = event.extras?["eventTitle"];
       String? location = event.extras?["eventLocation"];
       if (title != null && location != null) {
         _sendNotification(title, location);
+      } else {
+        print("Missing eventTitle or eventLocation in extras.");
       }
+    } else {
+      print("Geofence action: ${event.action}");
     }
   });
 
@@ -118,9 +133,16 @@ Future<void> main() async {
     }
   });
 
+  bg.BackgroundGeolocation.registerHeadlessTask(backgroundGeofenceCallback);
+
   Workmanager().initialize(
     callbackDispatcher,
     isInDebugMode: true,
+  );
+
+  Workmanager().registerOneOffTask(
+    "uniqueTaskName",
+    "checkGeofenceTask",
   );
 
   runApp(
@@ -155,16 +177,21 @@ class MyApp extends StatelessWidget {
 }
 
 void _sendNotification(String title, String location) {
+  print("Sending notification: $title at $location");
   AwesomeNotifications().createNotification(
     content: NotificationContent(
       id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
       channelKey: 'basic_channel',
       title: 'You are near an event!',
       body: '$title is scheduled at $location.',
-      notificationLayout: NotificationLayout.Default,
     ),
-  );
+  ).then((value) {
+    print("Notification sent successfully");
+  }).catchError((error) {
+    print("Failed to send notification: $error");
+  });
 }
+
 
 Future<void> _checkAllPermissions() async {
   LocationPermission locationPermission = await Geolocator.checkPermission();
@@ -189,20 +216,35 @@ Future<void> _checkAllPermissions() async {
 }
 
 @pragma('vm:entry-point')
-void backgroundGeofenceCallback(Map<String, dynamic> inputData) {
-  if (inputData.containsKey("eventTitle") && inputData.containsKey("eventLocation")) {
-    String title = inputData["eventTitle"];
-    String location = inputData["eventLocation"];
-    _sendNotification(title, location);
+void backgroundGeofenceCallback(bg.HeadlessEvent headlessEvent) async {
+  bg.GeofenceEvent geofenceEvent = headlessEvent.event;
+  print("Background Geofence Callback Triggered: ${geofenceEvent.identifier}");
+  if (geofenceEvent.action == "ENTER") {
+    String? title = geofenceEvent.extras?["eventTitle"];
+    String? location = geofenceEvent.extras?["eventLocation"];
+    if (title != null && location != null) {
+      print("Sending background notification for $title at $location");
+      _sendNotification(title, location);
+    } else {
+      print("Missing eventTitle or eventLocation in extras.");
+    }
   }
 }
 
+
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
+    print("WorkManager task executed: $task");
     if (task == "flutter_background_geolocation_geofence") {
-      backgroundGeofenceCallback(inputData!);
+      print("Executing geofence task.");
+      await Hive.initFlutter();
+      Hive.registerAdapter(ExamEventAdapter());
+      if (inputData != null) {
+        backgroundGeofenceCallback(inputData as bg.HeadlessEvent);
+      }
     }
     return Future.value(true);
   });
 }
+
 

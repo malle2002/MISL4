@@ -24,12 +24,9 @@ class _CalendarPageState extends State<CalendarPage> {
   void _updateEventController(List<ExamEvent> events) {
     _eventController.removeWhere((_) => true);
     for (var event in events) {
-      print("Event date: ${event.dateTime}");
       _eventController.add(CalendarEventData<ExamEvent>(
           title: event.title,
-          date: DateTime(
-              event.dateTime.year, event.dateTime.month, event.dateTime.day,
-              event.dateTime.hour, event.dateTime.minute),
+          date: event.dateTime,
           description: event.location,
           event: event,
           color: Color.fromRGBO(Random().nextInt(256), Random().nextInt(256),
@@ -69,7 +66,7 @@ class _CalendarPageState extends State<CalendarPage> {
             _updateEventController(eventProvider.events);
             return MonthView<ExamEvent>(
               onEventTap: (event, dateTime) {
-                  print(event.startTime);
+                  DateTime getDate = event.event?.dateTime ?? DateTime.now();
                   showDialog(
                     context: context,
                     builder: (BuildContext context) {
@@ -79,11 +76,21 @@ class _CalendarPageState extends State<CalendarPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text("Date: ${formattedDate(dateTime)}"),
+                            Text("Date: ${formattedDate(getDate)}"),
                             Text("Location: ${event.description}"),
                           ],
                         ),
                         actions: <Widget>[
+                          TextButton(
+                            onPressed: () {
+                              Provider.of<EventProvider>(context, listen: false)
+                                  .removeEvent(event.event as ExamEvent);
+                              Navigator.of(context).pop();
+
+                              setState(() {});
+                            },
+                            child: Text('Remove', style: TextStyle(color: Colors.red)),
+                          ),
                           TextButton(
                             onPressed: () {
                               Navigator.of(context).pop();

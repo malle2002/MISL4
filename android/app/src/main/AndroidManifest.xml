@@ -20,6 +20,7 @@
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
+            android:enableOnBackInvokedCallback="true"
             android:windowSoftInputMode="adjustResize">
             <!-- Specifies an Android theme to apply to this Activity as soon as
                  the Android process has started. This theme is visible to the user
@@ -39,6 +40,11 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <meta-data
+            android:name="android.app.hdr"
+            android:value="false" />
+
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyBDr-OZednF2tDG5LqTpahZFzvPL4LucAk" />
@@ -55,6 +61,15 @@
                 <action android:name="com.transistorsoft.flutter.backgroundgeolocation.HeadlessTask" />
             </intent-filter>
         </service>
+
+        <receiver
+            android:name="com.transistorsoft.flutter.backgroundgeolocation.HeadlessTask"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.transistorsoft.locationmanager.event.GEOFENCE" />
+            </intent-filter>
+        </receiver>
         <service android:name="com.transistorsoft.locationmanager.service.GeofencingService" android:permission="android.permission.BIND_JOB_SERVICE" />
 
     </application>
